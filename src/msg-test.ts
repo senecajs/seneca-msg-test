@@ -1,7 +1,5 @@
-/* Copyright (c) 2018-2024 Voxgig and other contributors, MIT License */
+/* Copyright (c) 2018-2026 Voxgig and other contributors, MIT License */
 'use strict'
-
-// TODO: add line numbers to all fail msgs!
 
 import Util from 'node:util'
 import Assert from 'node:assert'
@@ -42,10 +40,13 @@ const optioner = Optioner({
         params: Joi.alternatives()
           .try(Joi.object().unknown(), Joi.func())
           .default({}),
-        out: Joi.alternatives().try(Joi.object().unknown(), Joi.array()),
+        out: Joi.alternatives()
+          .try(Joi.object().unknown(), Joi.array())
+          .allow(null),
         err: Joi.object().unknown(),
         delegate: Joi.alternatives(Joi.string(), Joi.array(), Joi.func()),
         verify: Joi.func(),
+        run: Joi.boolean(),
         line: Joi.string(),
       })
     )
@@ -79,15 +80,17 @@ function msg_test(seneca: any, spec: any) {
   return test
 
   async function test() {
-    await seneca.ready()
+    await intern.ready(seneca)
 
     if (spec.test) {
       seneca.test(null, spec.log ? 'print' : null)
     }
 
-    if (!seneca.has_plugin('promisify')) {
+    // Seneca 4 provides `post` (promise based messages) in core.
+    // Seneca 3 needs the seneca-promisify plugin for it.
+    if ('function' !== typeof seneca.post) {
       seneca.use('promisify')
-      await seneca.ready()
+      await intern.ready(seneca)
     }
 
     var datajson = JSON.stringify(spec.data)
@@ -110,7 +113,40 @@ function msg_test(seneca: any, spec: any) {
   }
 }
 
-const intern = (module.exports.intern = {
+const intern = {
+  // Wait until the instance has finished loading plugins and pending
+  // work. Uses the callback form of `ready`: on seneca@4.0.0-rc5 the
+  // promise form (`await seneca.ready()`) never resolves when the
+  // instance is already idle, which is the usual case for test
+  // instances created at file load time.
+  ready: function(seneca: any): Promise<void> {
+    return new Promise((resolve) => seneca.ready(() => resolve()))
+  },
+
+  // Plain object view of an error, for matching against `call.err`.
+  // Optioner clones its input, which drops the non-enumerable `message`
+  // of an Error, so `message` and `name` are copied explicitly, along
+  // with the enumerable properties: on Seneca 3 the wrapper's `code`,
+  // `msg`, `orig` and `details`; on Seneca 4 (which passes the action's
+  // own error through) whatever the action set on it.
+  error_view: function(err: any): any {
+    const view: any = Object.assign({}, err)
+    view.message = err.message
+    view.name = err.name
+
+    // Seneca 3 wraps the action's error: the original is `err.orig`.
+    if (err.orig instanceof Error) {
+      view.orig = intern.error_view(err.orig)
+    }
+
+    return view
+  },
+
+  // Location of the call in the spec file, when recorded by `LN`.
+  where: function(call: any) {
+    return call.line ? ' (' + call.line + ')' : ''
+  },
+
   run: async function(seneca: any, spec: any, calls: any) {
     let callmap = spec.context
 
@@ -163,7 +199,8 @@ const intern = (module.exports.intern = {
         var msgstr = Jsonic.stringify(msg)
         call.msgstr = msgstr
 
-        let errname = (null == call.name ? '' : call.name + '~') + msgstr
+        let errname =
+          (null == call.name ? '' : call.name + '~') + msgstr + intern.where(call)
 
         var instance = intern.handle_delegate(seneca, call, callmap, spec)
 
@@ -204,9 +241,18 @@ const intern = (module.exports.intern = {
               )
             }
 
-            var result = Optioner(call.err, { must_match_literals: true })(err)
+            var result = Optioner(call.err, { must_match_literals: true })(
+              intern.error_view(err)
+            )
             if (result.error) {
-              return done(result.error)
+              return done(
+                new Error(
+                  'Error for: ' +
+                  errname +
+                  ' was invalid: ' +
+                  result.error.message
+                )
+              )
             }
           }
 
@@ -236,7 +282,6 @@ const intern = (module.exports.intern = {
                   new Error(
                     'Output for: ' +
                     errname +
-                    (call.line ? ' (' + call.line + ')' : '') +
                     ' was invalid: ' +
                     result.error.message
                   )
@@ -293,7 +338,8 @@ const intern = (module.exports.intern = {
             'Delegate not defined: ' +
             call.delegate +
             '. Message was: ' +
-            call.msgstr
+            call.msgstr +
+            intern.where(call)
           )
         }
       } else if (Array.isArray(call.delegate)) {
@@ -305,7 +351,8 @@ const intern = (module.exports.intern = {
           'Unknown delegate reference: ' +
           Util.inspect(call.delegate) +
           '. Message was: ' +
-          call.msgstr
+          call.msgstr +
+          intern.where(call)
         )
       }
     }
@@ -338,7 +385,7 @@ const intern = (module.exports.intern = {
       throw new Error('Test calls not defined for: ' + foundmsgs.join('; '))
     }
   },
-})
+}
 
 // Get line number of test message in spec file.
 // Use as an extra value in msg: `+LN()`
@@ -362,6 +409,7 @@ function LN(t: any) {
 msg_test.MsgTest = msg_test
 msg_test.Joi = Joi
 msg_test.LN = LN
+msg_test.intern = intern
 
 
 export default msg_test

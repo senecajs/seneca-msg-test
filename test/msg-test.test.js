@@ -1,19 +1,22 @@
-/* Copyright © 2018-2019 voxgig ltd. CONFIDENTIAL AND PROPRIETARY. */
+/* Copyright (c) 2018-2026 Voxgig and other contributors, MIT License */
 'use strict'
 
-const Lab = require('@hapi/lab')
-const Code = require('@hapi/code')
-const lab = (exports.lab = Lab.script())
-const expect = Code.expect
+const { test } = require('node:test')
+const assert = require('node:assert/strict')
 
 const SenecaMsgTest = require('../')
 const Seneca = require('seneca')
 
-const Joi = require('@hapi/joi')
+// Use the Joi instance of the harness so that versions match.
+const Joi = SenecaMsgTest.Joi
 
-lab.test(
+// Seneca 3 wraps action errors ("seneca: Action ... failed: ...");
+// Seneca 4 passes the action's own error through unchanged.
+const SENECA3 = require('seneca/package.json').version.startsWith('3.')
+
+test(
   'happy',
-  SenecaMsgTest(
+  run_spec(
     seneca_instance({ log: 'silent' }, function (seneca) {
       return seneca.use(function plugin0() {
         this.add('role:plugin0,cmd:zed', function (msg, reply) {
@@ -61,11 +64,11 @@ lab.test(
   )
 )
 
-lab.test('declarative', async () => {
+test('declarative', async () => {
   await SenecaMsgTest(require('./declarative'))()
 })
 
-lab.test('missing-calls', async () => {
+test('missing-calls', async (t) => {
   var si = seneca_instance({ log: 'silent' }, function (seneca) {
     return seneca.use(function plugin0() {
       this.add('role:plugin0,cmd:zed', () => {})
@@ -73,37 +76,35 @@ lab.test('missing-calls', async () => {
         .add('role:plugin0,red:*', () => {})
     })
   })
+  t.after(() => close(si))
 
-  try {
-    await SenecaMsgTest(si, {
+  await assert.rejects(
+    SenecaMsgTest(si, {
       test: true,
       pattern: 'role:plugin0',
       calls: [],
-    })()
-  } catch (e) {
-    expect(e.message).equal(
-      'Test calls not defined for: ' +
-        'cmd:zed,role:plugin0; cmd:qaz,role:plugin0'
-    )
-  }
+    })(),
+    {
+      message:
+        'Test calls not defined for: ' +
+        'cmd:zed,role:plugin0; cmd:qaz,role:plugin0',
+    }
+  )
 
-  try {
-    await SenecaMsgTest(si, {
-      test: true,
-      pattern: 'role:plugin0',
-      allow: {
-        missing: true,
-      },
-      calls: [],
-    })()
-  } catch (e) {
-    Code.fail('allow.missing allows missing calls')
-  }
+  // allow.missing allows missing calls
+  await SenecaMsgTest(si, {
+    test: true,
+    pattern: 'role:plugin0',
+    allow: {
+      missing: true,
+    },
+    calls: [],
+  })()
 })
 
-lab.test(
+test(
   'delegates',
-  SenecaMsgTest(
+  run_spec(
     seneca_instance({ log: 'silent' }, function (seneca) {
       return seneca.use(function plugin0() {
         this.add('role:plugin0,cmd:qaz', function (msg, reply, meta) {
@@ -155,9 +156,9 @@ lab.test(
   )
 )
 
-lab.test(
+test(
   'data-sequence',
-  SenecaMsgTest(
+  run_spec(
     seneca_instance({ log: 'silent' }, function (seneca) {
       return seneca.use(function foo() {
         this.add('role:foo,cmd:add', function (msg, reply) {
@@ -171,6 +172,12 @@ lab.test(
           })
           .add('role:foo,cmd:err', function (msg, reply) {
             reply(new Error(msg.text))
+          })
+          .add('role:foo,cmd:fail', function (msg, reply) {
+            const err = new Error(msg.text)
+            err.code = 'foo_failed'
+            err.details = { text: msg.text }
+            reply(err)
           })
       })
     }),
@@ -206,15 +213,128 @@ lab.test(
         {
           pattern: 'cmd:err',
           params: { text: 'foo' },
-          err: { msg: 'seneca: Action cmd:err,role:foo failed: foo.' },
+          err: SENECA3
+            ? // Seneca 3: the wrapped error, with the original in `orig`
+              {
+                message: 'seneca: Action cmd:err,role:foo failed: foo.',
+                msg: 'seneca: Action cmd:err,role:foo failed: foo.',
+                code: 'act_execute',
+                orig: { message: 'foo' },
+                details: { message: 'foo' },
+              }
+            : // Seneca 4: the error the action replied with
+              { message: 'foo', name: 'Error' },
+        },
+        {
+          pattern: 'cmd:fail',
+          params: { text: 'bar' },
+          err: SENECA3
+            ? {
+                code: 'act_execute',
+                orig: { message: 'bar', code: 'foo_failed' },
+              }
+            : { message: 'bar', code: 'foo_failed', details: { text: 'bar' } },
+        },
+        {
+          pattern: 'cmd:err',
+          params: { text: 'zed' },
+          // Joi rules work on both Seneca versions
+          err: { message: Joi.string().pattern(/zed/) },
         },
       ],
     }
   )
 )
 
-lab.test('bad-delegate', async () => {
-  var msgfunc = SenecaMsgTest(seneca_instance({ log: 'silent' }), {
+test('error-mismatch', async (t) => {
+  var si = seneca_instance({ log: 'silent' }, function (seneca) {
+    return seneca.use(function plugin0() {
+      this.add('role:plugin0,cmd:err', function (msg, reply) {
+        reply(new Error('foo'))
+      })
+    })
+  })
+  t.after(() => close(si))
+
+  await assert.rejects(
+    SenecaMsgTest(si, {
+      test: false,
+      pattern: 'role:plugin0',
+      calls: [
+        {
+          pattern: 'cmd:err',
+          err: { message: 'not-foo' },
+        },
+      ],
+    })(),
+    {
+      message:
+        'Error for: {role:plugin0,cmd:err} was invalid: ' +
+        '"message" must be [not-foo]',
+    }
+  )
+
+  await assert.rejects(
+    SenecaMsgTest(si, {
+      test: false,
+      pattern: 'role:plugin0',
+      calls: [
+        {
+          pattern: 'cmd:err',
+          out: { x: 1 },
+        },
+      ],
+    })(),
+    {
+      // Seneca 3 wraps the message; Seneca 4 passes it through
+      message:
+        /^Error not expected for: \{role:plugin0,cmd:err\}, err: Error: .*foo/,
+    }
+  )
+})
+
+test('no-output', async (t) => {
+  var si = seneca_instance({ log: 'silent' }, function (seneca) {
+    return seneca.use(function plugin0() {
+      this.add('role:plugin0,cmd:nothing', function (msg, reply) {
+        reply()
+      }).add('role:plugin0,cmd:something', function (msg, reply) {
+        reply({ x: 1 })
+      })
+    })
+  })
+  t.after(() => close(si))
+
+  // out: null asserts that there is no reply; run: false skips a call
+  await SenecaMsgTest(si, {
+    test: false,
+    pattern: 'role:plugin0',
+    calls: [
+      { pattern: 'cmd:nothing', out: null },
+      { pattern: 'cmd:something', out: { x: 2 }, run: false },
+      { pattern: 'cmd:something', out: { x: 1 } },
+    ],
+  })()
+
+  await assert.rejects(
+    SenecaMsgTest(si, {
+      test: false,
+      pattern: 'role:plugin0',
+      allow: { missing: true },
+      calls: [{ pattern: 'cmd:something', out: null }],
+    })(),
+    {
+      message:
+        'Output not expected for: {role:plugin0,cmd:something}, out: [object Object]',
+    }
+  )
+})
+
+test('bad-delegate', async (t) => {
+  var si = seneca_instance({ log: 'silent' })
+  t.after(() => close(si))
+
+  var msgfunc = SenecaMsgTest(si, {
     test: true,
     pattern: 'a:1',
     calls: [
@@ -225,15 +345,14 @@ lab.test('bad-delegate', async () => {
     ],
   })()
 
-  await expect(msgfunc).reject(
-    Error,
-    'Delegate not defined: bad. Message was: {a:1,b:1}'
-  )
+  await assert.rejects(msgfunc, {
+    message: 'Delegate not defined: bad. Message was: {a:1,b:1}',
+  })
 })
 
-lab.test(
+test(
   'dynamic-delegate',
-  SenecaMsgTest(
+  run_spec(
     seneca_instance({ log: 'silent' }, function (seneca) {
       return seneca
         .use('promisify')
@@ -277,9 +396,9 @@ lab.test(
   )
 )
 
-lab.test(
+test(
   'self-reference',
-  SenecaMsgTest(
+  run_spec(
     seneca_instance({ log: 'silent' }, function (seneca) {
       return seneca.use(function plugin0() {
         this.add('a:1', function (msg, reply) {
@@ -302,7 +421,41 @@ lab.test(
   )
 )
 
+test('exports', () => {
+  assert.equal(typeof SenecaMsgTest, 'function')
+  assert.equal(SenecaMsgTest.MsgTest, SenecaMsgTest)
+  assert.equal(typeof SenecaMsgTest.LN, 'function')
+  assert.equal(typeof SenecaMsgTest.Joi.object, 'function')
+  assert.equal(typeof SenecaMsgTest.intern.run, 'function')
+  assert.equal(typeof SenecaMsgTest.intern.missing_messages, 'function')
+  assert.equal(typeof SenecaMsgTest.intern.handle_delegate, 'function')
+
+  const err = new Error('foo')
+  err.code = 'c0'
+  assert.deepEqual(SenecaMsgTest.intern.error_view(err), {
+    message: 'foo',
+    name: 'Error',
+    code: 'c0',
+  })
+})
+
 function seneca_instance(options, setup) {
   setup = setup || ((x) => x)
   return setup(Seneca(options).use('entity'))
+}
+
+// Run the message test, then close the instance so that the process exits.
+function run_spec(seneca, spec) {
+  const msgtest = SenecaMsgTest(seneca, spec)
+  return async function () {
+    try {
+      await msgtest()
+    } finally {
+      await close(seneca)
+    }
+  }
+}
+
+function close(seneca) {
+  return new Promise((resolve) => seneca.close(resolve))
 }
