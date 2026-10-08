@@ -6,21 +6,13 @@ and returns a promise, which every common runner accepts as a test body.
 The versions below were run with the examples from this repository on
 the Seneca 4 prerelease.
 
-The shared pieces: a plugin, and a spec file with `test: false` so that
-the silent instance stays silent.
-
-```js
-// shop.spec.js
-module.exports = {
-  test: false,
-  pattern: 'role:shop',
-  calls: [
-    { name: 'apple', pattern: 'cmd:price', params: { item: 'apple', quantity: 2 }, out: { item: 'apple', total: 1 } },
-    { pattern: 'cmd:price', params: { item: 'pear', quantity: '`apple:out.quantity`' }, out: { total: 1.5 } },
-    { pattern: 'cmd:price', params: { item: 'kiwi' }, err: { message: 'unknown item: kiwi' } },
-  ],
-}
-```
+The examples use the plugin and the spec from the
+[tutorial](../tutorials/getting-started.md),
+[`docs/examples/shop.js`](../examples/shop.js) and
+[`docs/examples/shop.spec.js`](../examples/shop.spec.js), copied next to
+the test file. In a copy, take `Joi` from
+`require('seneca-msg-test').Joi`, as the comment in the spec says. The
+spec sets `test: false` so that the silent instance stays silent.
 
 ## lab (@hapi/lab 26)
 
@@ -92,7 +84,8 @@ and 4; on Seneca 4 `await seneca.close()` works too.
 ## Several specs on one instance
 
 A spec can be run more than once, and several specs can share an
-instance. Seeded `data` accumulates in the store across runs (see
+instance. Named `delegates` are built again from their definitions at
+the start of each run. Seeded `data` accumulates in the store across runs (see
 [Seed entity data](seed-entity-data.md)), and the reference context is
 per spec object: the `context` property of the spec receives the call
 records, so reuse of a spec object keeps the records of the previous

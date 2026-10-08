@@ -76,6 +76,11 @@ function msg_test(seneca: any, spec: any) {
   // top level `pattern` replaces `fix`; `fix` deprecated as does not override
   spec.pattern = '' === spec.pattern ? spec.fix : spec.pattern
 
+  // The fixed arguments of each named delegate. Every run builds its
+  // delegates from these into a new `spec.delegates`, so that the test
+  // function can run more than once.
+  const delegate_defs = spec.delegates
+
   test.run = intern.run
   return test
 
@@ -105,8 +110,9 @@ function msg_test(seneca: any, spec: any) {
 
     intern.missing_messages(seneca, spec, calls)
 
-    Object.keys(spec.delegates).forEach((dk) => {
-      spec.delegates[dk] = seneca.delegate.apply(seneca, spec.delegates[dk])
+    spec.delegates = {}
+    Object.keys(delegate_defs).forEach((dk) => {
+      spec.delegates[dk] = seneca.delegate.apply(seneca, delegate_defs[dk])
     })
 
     await intern.run(seneca, spec, calls)

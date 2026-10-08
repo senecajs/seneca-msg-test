@@ -24,6 +24,10 @@
   `Error for: <call> was invalid: <reason>` instead of the raw Joi
   validation error.
 * Failure messages include the spec file location recorded by `LN`.
+* The test function can run more than once with named `delegates`:
+  each run builds the delegates from their definitions. Before, the
+  first run replaced the definitions with the built delegates, so a
+  second run lost their fixed arguments.
 * The call schema accepts `run: false` (skip a call) and `out: null`
   (assert that there is no reply); both were implemented but rejected
   by the validation when `calls` was an array.

@@ -350,6 +350,41 @@ test('bad-delegate', async (t) => {
   })
 })
 
+test('rerun-with-delegates', async () => {
+  // The test function can run more than once: each run builds the named
+  // delegates from their definitions.
+  const seneca = seneca_instance({ log: 'silent' }, function (seneca) {
+    return seneca.use(function plugin0() {
+      this.add('role:plugin0,cmd:qaz', function (msg, reply, meta) {
+        reply({ y: msg.y, z: meta.custom.z, w: msg.w })
+      })
+    })
+  })
+
+  const msgtest = SenecaMsgTest(seneca, {
+    test: true,
+    delegates: {
+      d0: [{ w: 'AA' }, { custom: { z: 'A' } }],
+    },
+    pattern: 'role:plugin0',
+    calls: [
+      {
+        delegate: 'd0',
+        pattern: 'cmd:qaz',
+        params: { y: 'a' },
+        out: { y: 'a', z: 'A', w: 'AA' },
+      },
+    ],
+  })
+
+  try {
+    await msgtest()
+    await msgtest()
+  } finally {
+    await close(seneca)
+  }
+})
+
 test(
   'dynamic-delegate',
   run_spec(
