@@ -1,0 +1,76 @@
+From dd7c0c4f94122573b850bbe72738d05fdb89f8bf Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 7 Oct 2026 21:36:23 +0000
+Subject: [PATCH] ci: build on Node 24 and 22
+
+Replace the obsolete matrix (lts/*, 17.x, 16.x, 14.x, 12.x and 10.x on
+three operating systems, with a Coveralls upload that no longer has a
+report to send) with Node.js 24.x and 22.x on ubuntu-latest, using
+actions/checkout@v4 and actions/setup-node@v4 with the npm cache, then
+npm install, npm run build --if-present and npm test. Trigger on pushes
+and pull requests for master and main.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LaHppcejXbSsAH4BZXNsjV
+---
+ .github/workflows/build.yml | 37 +++++++++++++------------------------
+ 1 file changed, 13 insertions(+), 24 deletions(-)
+
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index eb02ce2..68c2672 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -1,37 +1,26 @@
+-# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+-
+ name: build
+ 
+ on:
+   push:
+-    branches: [ master ]
++    branches: [master, main]
+   pull_request:
+-    branches: [ master ]
++    branches: [master, main]
+ 
+ jobs:
+   build:
++    runs-on: ubuntu-latest
+ 
+     strategy:
+-      fail-fast: false
+       matrix:
+-        os: [ubuntu-latest, windows-latest, macos-latest]
+-        node-version: [lts/*, 17.x, 16.x, 14.x, 12.x, 10.x]
++        node-version: [24.x, 22.x]
+ 
+-    runs-on: ${{ matrix.os }} 
+-        
+     steps:
+-    - uses: actions/checkout@v2
+-    - name: Use Node.js ${{ matrix.node-version }}
+-      uses: actions/setup-node@v1
+-      with:
+-        node-version: ${{ matrix.node-version }}
+-    - run: npm ci
+-    - run: npm run build --if-present
+-    - run: npm test
+-
+-    - name: Coveralls
+-      uses: coverallsapp/github-action@master
+-      with:
+-        github-token: ${{ secrets.GITHUB_TOKEN }}
+-        path-to-lcov: ./test/lcov.info
++      - uses: actions/checkout@v4
++      - name: Use Node.js ${{ matrix.node-version }}
++        uses: actions/setup-node@v4
++        with:
++          node-version: ${{ matrix.node-version }}
++          cache: npm
++      - run: npm install
++      - run: npm run build --if-present
++      - run: npm test
+-- 
+2.43.0
+
