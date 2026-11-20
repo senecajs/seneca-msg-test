@@ -1,6 +1,41 @@
 # Changes
 
-## 4.2.0 2026-10-07
+## 5.0.0 2026-11-20
+
+4.2.0 was prepared but not published; its changes, listed below, are
+part of this version, except where this entry replaces them.
+
+* Seneca 4: the peer dependency is `seneca` `^4.0.0` (was
+  `>=3 || >=4.0.0-rc5`). Seneca 3 users stay on `seneca-msg-test@4`.
+* Node.js 24 or later (`engines.node` `>=24`, was `>=18`).
+* The entity peer dependency is `@seneca/entity` `^29.0.0`, and it is
+  optional: without the entity plugin, `data` is not seeded. The peer
+  dependency `seneca-entity` `>=25` is removed. npm installed
+  seneca-entity 28 for it in every project that used the harness, and
+  that version stops Seneca 4 at startup with `plugin_gubu_shape`.
+* The peer dependency `seneca-promisify` is removed, and the harness no
+  longer loads the plugin when the instance has no `post` method.
+  Seneca 4 has promises built in and deprecates the plugin (D4).
+* The harness waits for the instance with `await seneca.ready()`. The
+  callback form was a workaround for 4.0.0-rc5, where the promise form
+  never resolved on an idle instance; 4.0.0 fixes that.
+* The documentation and the tests load the entity plugin by its full
+  name, `.use('@seneca/entity')` (B14), and name the delegate argument
+  `fixedmsg`, as Seneca 4 does (D6). The tests no longer load
+  `seneca-promisify` and no longer carry Seneca 3 error expectations.
+  "Assert on errors" and "Seneca 3 and Seneca 4" explain how to convert
+  a spec written for Seneca 3.
+* The coverage threshold of `npm test` (80% of lines) is measured on
+  `dist/`, the code of this package. Before, it also counted Seneca and
+  the entity plugin whenever they were linked from outside
+  `node_modules`.
+* devDependencies: `seneca` `^4.0.0` and `@seneca/entity` `^29.0.0`
+  replace `seneca` `^4.0.0-rc5`, `seneca-entity` and `seneca-promisify`.
+* `package-lock.json` is no longer committed. `repository`, `bugs` and
+  `homepage` point to `senecajs/seneca-msg-test`, and `publishConfig`
+  sets public access.
+
+## 4.2.0 2026-10-07 (not published)
 
 * Seneca 4 prerelease support. The test suite runs against
   `seneca@4.0.0-rc5` (devDependency) and the unreleased 4.0.0, and

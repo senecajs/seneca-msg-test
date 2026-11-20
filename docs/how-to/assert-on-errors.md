@@ -1,7 +1,6 @@
-# Assert on errors on Seneca 3 and 4
+# Assert on errors
 
-How to describe the error a message is expected to produce, on either
-Seneca version.
+How to describe the error a message is expected to produce.
 
 ## 1. Expect an error with `err`
 
@@ -24,49 +23,43 @@ none (`Error expected for: ..., was null`).
 
 The harness matches `err` against a plain object view of the error: its
 `message` and `name`, and all enumerable properties such as `code` and
-`details`. What those hold depends on the Seneca version.
-
-On Seneca 4 (4.0.0-rc5 and later) the error reaches the test as the
-action replied it:
+`details`. Seneca 4 passes the error to the test as the action replied
+it:
 
 ```js
 // the action: reply(err) where err.message === 'bar', err.code === 'foo_failed'
 err: { message: 'bar', code: 'foo_failed', details: { text: 'bar' } },
 ```
 
-On Seneca 3 the error is wrapped. `message` and `msg` are
-`seneca: Action <pattern> failed: <original message>.`, `code` is
-`act_execute`, the original error is `orig` (also viewed as a plain
-object, so its `message` can be matched) and `details.message` is the
-original message:
+When the error carries the error it was built from in `orig`, the view
+presents `orig` in the same form, so `orig.message` can be matched.
 
-```js
-err: {
-  message: 'seneca: Action cmd:err,role:foo failed: foo.',
-  code: 'act_execute',
-  orig: { message: 'foo', code: 'foo_failed' },
-},
-```
-
-## 3. Write one expectation for both versions
-
-Either check the version in the test file:
-
-```js
-const SENECA3 = require('seneca/package.json').version.startsWith('3.')
-
-err: SENECA3
-  ? { code: 'act_execute', orig: { message: 'foo' } }
-  : { message: 'foo' },
-```
-
-or use a Joi rule that both message forms satisfy:
+Values that you cannot predict exactly can be Joi rules:
 
 ```js
 const Joi = require('seneca-msg-test').Joi
 
 err: { message: Joi.string().pattern(/foo/) },
 ```
+
+## 3. Convert an expectation written for Seneca 3
+
+Seneca 3 wrapped every action error: `message` and `msg` were
+`seneca: Action <pattern> failed: <original message>.`, `code` was
+`act_execute` and the original error was `orig`. On Seneca 4 such an
+expectation fails, because the error is the action's own. Match the
+action's error directly:
+
+```js
+// Seneca 3, seneca-msg-test 4
+err: { code: 'act_execute', orig: { message: 'foo', code: 'foo_failed' } },
+
+// Seneca 4, seneca-msg-test 5
+err: { message: 'foo', code: 'foo_failed' },
+```
+
+A Joi rule on `message` that both message forms satisfy, as above,
+needs no change.
 
 ## 4. Inspect Seneca's own description of the failure
 
@@ -92,7 +85,7 @@ paths, create the instance with `log: 'silent'` and set `test: false`
 in the spec so that the harness leaves the logging alone:
 
 ```js
-const seneca = Seneca({ log: 'silent' }).use('entity').use(plugin)
+const seneca = Seneca({ log: 'silent' }).use('@seneca/entity').use(plugin)
 
 module.exports = { pattern: 'role:shop', test: false, calls: [ ... ] }
 ```

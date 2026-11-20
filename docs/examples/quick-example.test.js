@@ -7,7 +7,7 @@ const Seneca = require('seneca')
 const SenecaMsgTest = require('../..') // in your project: require('seneca-msg-test')
 
 const seneca = Seneca({ log: 'silent' })
-  .use('entity')
+  .use('@seneca/entity')
   .use(function color() {
     this.add('role:color,cmd:add', function (msg, reply) {
       this.make$('color/item')

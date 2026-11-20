@@ -8,18 +8,14 @@ files are in [docs/examples](../examples/).
 
 ## 1. Install
 
-You need Node.js 18 or later (24 and 22 are tested) and a project that
-uses Seneca. This tutorial uses the Seneca 4 prerelease and the entity
-plugin, which provides the in-memory store that the harness seeds with
-test data:
+You need Node.js 24 or later and a project that uses Seneca 4. This
+tutorial uses the entity plugin, `@seneca/entity`, which provides the
+in-memory store that the harness seeds with test data:
 
 ```sh
-npm install seneca@^4.0.0-rc5 seneca-entity
+npm install seneca@^4 @seneca/entity
 npm install --save-dev seneca-msg-test
 ```
-
-On Seneca 3, also install `seneca-promisify`. The harness loads it when
-the instance has no `post` method.
 
 ## 2. The plugin under test
 
@@ -173,7 +169,7 @@ const { test, after } = require('node:test')
 const Seneca = require('seneca')
 const SenecaMsgTest = require('../..') // in your project: require('seneca-msg-test')
 
-const seneca = Seneca({ log: 'silent' }).use('entity').use(require('./shop.js'))
+const seneca = Seneca({ log: 'silent' }).use('@seneca/entity').use(require('./shop.js'))
 
 test('shop messages', SenecaMsgTest(seneca, require('./shop.spec.js')))
 
@@ -250,8 +246,8 @@ before you continue.
   [Reference earlier replies](../how-to/reference-earlier-replies.md).
 * Seed more data and understand the layout:
   [Seed entity data for message tests](../how-to/seed-entity-data.md).
-* Assert on errors in a way that works on Seneca 3 and 4:
-  [Assert on errors on Seneca 3 and 4](../how-to/assert-on-errors.md).
+* Assert on errors:
+  [Assert on errors](../how-to/assert-on-errors.md).
 * Use another test runner:
   [Run with lab, jest or mocha](../how-to/run-with-lab-or-jest.md).
 * Look up every property: [Test specification](../reference/spec.md).

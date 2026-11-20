@@ -4,9 +4,9 @@ Declarative tests for the messages of a Seneca plugin. A test
 specification lists the messages to send, in order, and the replies or
 errors to expect. The harness sends them to a Seneca instance one after
 another, checks every reply, and reports the first mismatch together
-with the message that caused it. It works with Seneca 3 and the Seneca 4
-prerelease, on Node.js 18 or later (24 and 22 are tested), with any test
-runner: `node:test`, lab, jest or mocha.
+with the message that caused it. It works with Seneca 4 on Node.js 24
+or later, with any test runner: `node:test`, lab, jest or mocha.
+Seneca 3 users stay on `seneca-msg-test@4`.
 
 [![npm version][npm-badge]][npm-url]
 [![build][build-badge]][build-url]
@@ -17,14 +17,15 @@ runner: `node:test`, lab, jest or mocha.
 ## Install
 
 ```sh
+npm install seneca@^4 @seneca/entity
 npm install --save-dev seneca-msg-test
 ```
 
-The harness needs `seneca` (3.x, or 4.0.0-rc5 and later) and
-`seneca-entity` in your project: it seeds test data through the entity
-plugin's in-memory store. On Seneca 3 it also needs `seneca-promisify`,
-which it loads when the instance has no `post` method. All three are
-peer dependencies.
+The harness needs `seneca` 4 in your project. It seeds test data
+through the in-memory store of the entity plugin, `@seneca/entity` 29
+or later. Both are peer dependencies; `@seneca/entity` is optional, and
+without it the `data` of a spec is not seeded. Load the entity plugin
+by its full name, `.use('@seneca/entity')`.
 
 ## Quick Example
 
@@ -38,7 +39,7 @@ const Seneca = require('seneca')
 const SenecaMsgTest = require('seneca-msg-test')
 
 const seneca = Seneca({ log: 'silent' })
-  .use('entity')
+  .use('@seneca/entity')
   .use(function color() {
     this.add('role:color,cmd:add', function (msg, reply) {
       this.make$('color/item')
@@ -97,8 +98,8 @@ The file is [docs/examples/quick-example.test.js](docs/examples/quick-example.te
 * How-to guides:
   [seed entity data](docs/how-to/seed-entity-data.md),
   [reference earlier replies](docs/how-to/reference-earlier-replies.md),
-  [use delegates with fixed arguments and custom meta data](docs/how-to/use-delegates.md),
-  [assert on errors on Seneca 3 and 4](docs/how-to/assert-on-errors.md),
+  [use delegates with fixed message properties and custom meta data](docs/how-to/use-delegates.md),
+  [assert on errors](docs/how-to/assert-on-errors.md),
   [check replies with Joi rules and code](docs/how-to/check-replies-with-joi-and-code.md),
   [allow unlisted messages](docs/how-to/allow-unlisted-messages.md),
   [debug a failing spec](docs/how-to/debug-a-failing-spec.md),
@@ -141,7 +142,7 @@ The full documentation is in [docs](docs/README.md).
 | `calls` | The messages to send, in order, as an array or a function of `LN`. | [Spec](docs/reference/spec.md#spec-properties) |
 | `data` | Entities seeded into the in-memory store before the calls. | [Spec](docs/reference/spec.md#spec-properties) |
 | `context` | Initial reference context; call records are added to it. | [Spec](docs/reference/spec.md#spec-properties) |
-| `delegates` | Named `seneca.delegate(fixedargs, fixedmeta)` instances for calls. | [Spec](docs/reference/spec.md#spec-properties) |
+| `delegates` | Named `seneca.delegate(fixedmsg, fixedmeta)` instances for calls. | [Spec](docs/reference/spec.md#spec-properties) |
 | `init`, `test`, `log`, `print`, `allow.missing` | Instance setup, test mode, logging, printing, missing messages check. | [Spec](docs/reference/spec.md#spec-properties) |
 
 | Call property | Purpose | Reference |
@@ -160,8 +161,9 @@ touch.
 
 The source is TypeScript in `src/`, compiled to `dist/` (which is
 committed and published). The tests use the Node.js test runner and run
-against the Seneca 4 prerelease (devDependency `seneca@^4.0.0-rc5`).
-Node.js 24 is the default target; Node.js 22 is also tested.
+against Seneca 4 (devDependencies `seneca@^4.0.0` and
+`@seneca/entity@^29.0.0`) on Node.js 24 or later. The coverage
+threshold (80% of lines) applies to `dist/`, the code of this package.
 
 ```sh
 npm install
@@ -170,36 +172,30 @@ npm test
 ```
 
 To test against an unreleased Seneca build, install its tarball without
-saving it, then restore the prerelease; the same works for Seneca 3,
-whose wrapped error format the test suite also understands:
+saving it, then restore the declared version:
 
 ```sh
-npm install --no-save /path/to/seneca-4.0.0.tgz && npm test
-npm install --no-save seneca@3 && npm test
+npm install --no-save /path/to/seneca-4.x.y.tgz && npm test
 npm install
 ```
 
-Format code with `npm run prettier`. The continuous integration
-workflow is delivered as a patch in [.patches](.patches/README.md)
-(`git am .patches/*.patch`), because workflow files need a GitHub
-`workflow` scope that the preparing session did not have.
+Format code with `npm run prettier`.
 
 ## Background
 
 seneca-msg-test was first published in 2018 by [Voxgig](https://www.voxgig.com)
 to test the message interfaces of the Seneca plugins it maintains.
-Version 4.2.0 adds support for the Seneca 4 prerelease, moves the tests
-to the Node.js test runner, and reorganizes the documentation. Changes
-between versions are listed in [CHANGES.md](CHANGES.md).
+Version 5.0.0 supports Seneca 4 only, moves the tests to the Node.js
+test runner, and reorganizes the documentation. Changes between
+versions are listed in [CHANGES.md](CHANGES.md).
 
-| Seneca | What differs | Node.js |
-| ------ | ------------ | ------- |
-| 3.x (tested with 3.38) | Needs `seneca-promisify` (loaded by the harness). Action errors reach `err` wrapped: `message` is `seneca: Action <pattern> failed: <message>.` and the original error is `err.orig`. | 18 or later (tested on 22 and 24) |
-| 4.0.0-rc5 and 4.0.0 | Promises are built in. Action errors reach `err` as the action replied them. | 22 or later (a Seneca 4 requirement) |
+| Seneca | seneca-msg-test | What differs | Node.js |
+| ------ | --------------- | ------------ | ------- |
+| 4.x | 5.x | Promises are built in. Action errors reach `err` as the action replied them. The entity plugin is `@seneca/entity`. | 24 or later |
+| 3.x | 4.x | Needs `seneca-promisify` (loaded by the harness). Action errors reach `err` wrapped: `message` is `seneca: Action <pattern> failed: <message>.` and the original error is `err.orig`. The entity plugin is `seneca-entity`. | as Seneca 3 |
 
 See [Seneca 3 and Seneca 4](docs/explanation/seneca-3-and-4.md) for
-the details, including the `ready()` workaround the harness applies for
-4.0.0-rc5.
+what a spec written for Seneca 3 needs on Seneca 4.
 
 Licensed under [MIT](LICENSE).
 
