@@ -20,8 +20,8 @@ The programs from the documentation are in [examples](examples/).
 | ----- | ------ |
 | [Seed entity data for message tests](how-to/seed-entity-data.md) | The `data` layout, entities with and without a base, exporting data from a store, how seeded data merges. |
 | [Reference earlier replies](how-to/reference-earlier-replies.md) | Naming calls, `` `name:out.id` `` in parameters and expected replies, paths, expressions, the `context` property. |
-| [Use delegates with fixed arguments and custom meta data](how-to/use-delegates.md) | Named delegates, one-off delegates, computed delegates, delegates created while the spec runs. |
-| [Assert on errors on Seneca 3 and 4](how-to/assert-on-errors.md) | The `err` property, what the error looks like on each Seneca version, version independent rules, silencing expected errors. |
+| [Use delegates with fixed message properties and custom meta data](how-to/use-delegates.md) | Named delegates, one-off delegates, computed delegates, delegates created while the spec runs. |
+| [Assert on errors](how-to/assert-on-errors.md) | The `err` property, what the error looks like, Joi rules, converting expectations written for Seneca 3, silencing expected errors. |
 | [Check replies with Joi rules and code](how-to/check-replies-with-joi-and-code.md) | Literal matching, Joi rules inside `out`, array replies, `params` functions, `verify` functions. |
 | [Allow unlisted messages](how-to/allow-unlisted-messages.md) | The missing messages check and `allow.missing`. |
 | [Debug a failing spec](how-to/debug-a-failing-spec.md) | Reading failure messages, `print`, `print_context`, `log`, `LN`, skipping calls. |
@@ -42,7 +42,7 @@ The programs from the documentation are in [examples](examples/).
 | ----------- | ----- |
 | [How the harness works](explanation/how-the-harness-works.md) | What happens from `SenecaMsgTest(seneca, spec)` to the last call: setup, seeding, the missing messages check, the call loop, the context. |
 | [Why declarative message tests](explanation/why-declarative-message-tests.md) | The reasons for describing message tests as data, and the limits of the approach. |
-| [Seneca 3 and Seneca 4](explanation/seneca-3-and-4.md) | `ready()` on 4.0.0-rc5, wrapped versus unwrapped errors, promises, peer dependencies. |
+| [Seneca 3 and Seneca 4](explanation/seneca-3-and-4.md) | What a spec written for Seneca 3 needs on Seneca 4: unwrapped errors, built-in promises, the `@seneca/entity` plugin, peer dependencies. |
 
 ## Feature index
 
@@ -79,7 +79,7 @@ the page that specifies it and the guide that shows it in use.
 | The call record (`out`, `err`, `params`, `msg`, `meta`, `pattern`, `top_pattern`) | [The call record](reference/references.md#the-call-record) | [Reference earlier replies](how-to/reference-earlier-replies.md) |
 | Failure messages | [Failure messages](reference/failures.md) | [Debug a failing spec](how-to/debug-a-failing-spec.md) |
 | Spec validation errors | [Validation](reference/spec.md#validation) | |
-| Seneca 3 and Seneca 4 differences (`ready`, errors, promises) | [Seneca 3 and Seneca 4](explanation/seneca-3-and-4.md) | [Assert on errors](how-to/assert-on-errors.md) |
+| Seneca 3 and Seneca 4 differences (errors, promises, the entity plugin) | [Seneca 3 and Seneca 4](explanation/seneca-3-and-4.md) | [Assert on errors](how-to/assert-on-errors.md) |
 | Other test runners | | [Run with lab, jest or mocha](how-to/run-with-lab-or-jest.md) |
 
 ## Other documents

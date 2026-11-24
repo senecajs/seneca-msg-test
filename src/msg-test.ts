@@ -76,7 +76,8 @@ function msg_test(seneca: any, spec: any) {
   // top level `pattern` replaces `fix`; `fix` deprecated as does not override
   spec.pattern = '' === spec.pattern ? spec.fix : spec.pattern
 
-  // The fixed arguments of each named delegate. Every run builds its
+  // The definition of each named delegate: the arguments of
+  // `seneca.delegate(fixedmsg, fixedmeta)`. Every run builds its
   // delegates from these into a new `spec.delegates`, so that the test
   // function can run more than once.
   const delegate_defs = spec.delegates
@@ -89,13 +90,6 @@ function msg_test(seneca: any, spec: any) {
 
     if (spec.test) {
       seneca.test(null, spec.log ? 'print' : null)
-    }
-
-    // Seneca 4 provides `post` (promise based messages) in core.
-    // Seneca 3 needs the seneca-promisify plugin for it.
-    if ('function' !== typeof seneca.post) {
-      seneca.use('promisify')
-      await intern.ready(seneca)
     }
 
     var datajson = JSON.stringify(spec.data)
@@ -121,26 +115,25 @@ function msg_test(seneca: any, spec: any) {
 
 const intern = {
   // Wait until the instance has finished loading plugins and pending
-  // work. Uses the callback form of `ready`: on seneca@4.0.0-rc5 the
-  // promise form (`await seneca.ready()`) never resolves when the
-  // instance is already idle, which is the usual case for test
-  // instances created at file load time.
-  ready: function(seneca: any): Promise<void> {
-    return new Promise((resolve) => seneca.ready(() => resolve()))
+  // work. Resolves promptly when the instance is already idle, which is
+  // the usual case for test instances created at file load time.
+  ready: async function(seneca: any): Promise<void> {
+    await seneca.ready()
   },
 
   // Plain object view of an error, for matching against `call.err`.
   // Optioner clones its input, which drops the non-enumerable `message`
   // of an Error, so `message` and `name` are copied explicitly, along
-  // with the enumerable properties: on Seneca 3 the wrapper's `code`,
-  // `msg`, `orig` and `details`; on Seneca 4 (which passes the action's
-  // own error through) whatever the action set on it.
+  // with the enumerable properties that the action set on its error,
+  // such as `code` and `details` (Seneca 4 passes the action's own
+  // error through).
   error_view: function(err: any): any {
     const view: any = Object.assign({}, err)
     view.message = err.message
     view.name = err.name
 
-    // Seneca 3 wraps the action's error: the original is `err.orig`.
+    // An error built from another error (for example by Seneca's error
+    // helper) keeps that error in `orig`: view it the same way.
     if (err.orig instanceof Error) {
       view.orig = intern.error_view(err.orig)
     }

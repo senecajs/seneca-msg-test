@@ -20,27 +20,23 @@ returning test body accepts it.
 ## Setup, in order
 
 1. **Ready.** The instance may still be loading plugins. The harness
-   waits with the callback form of `seneca.ready`, which also works on
-   seneca@4.0.0-rc5, where the promise form never resolves for an idle
-   instance (see [Seneca 3 and Seneca 4](seneca-3-and-4.md)).
+   waits with `await seneca.ready()`, which resolves at once when the
+   instance is already idle (see [Seneca 3 and Seneca 4](seneca-3-and-4.md)).
 2. **Test mode.** If `test` is true, `seneca.test()` is applied. It
    gives readable logs at level `warn` and callpoints, which is what you
    want when a call fails; `test: false` keeps whatever the test
    configured.
-3. **Promises.** The harness uses `seneca.post` for its own message.
-   Seneca 4 has it; on Seneca 3 the harness loads seneca-promisify and
-   waits for ready again.
-4. **Data.** `spec.data` is sent to the store as one import message, so
-   that seeding is a single step that works for any amount of data, and
-   with `default$: {}` so that an instance without the entity plugin is
-   not an error.
-5. **Calls.** If `calls` is a function it is called now, with `LN`, so
+3. **Data.** `spec.data` is sent to the store with `seneca.post` as one
+   import message, so that seeding is a single step that works for any
+   amount of data, and with `default$: {}` so that an instance without
+   the entity plugin is not an error.
+4. **Calls.** If `calls` is a function it is called now, with `LN`, so
    that each run gets fresh call objects.
-6. **Missing messages.** The instance's patterns under `spec.pattern`
+5. **Missing messages.** The instance's patterns under `spec.pattern`
    are compared with the calls. This runs before the calls, so a plugin
    message without a test fails fast and with a list, instead of being
    silently untested.
-7. **Delegates.** The named delegates are created from the ready
+6. **Delegates.** The named delegates are created from the ready
    instance.
 
 ## The call loop

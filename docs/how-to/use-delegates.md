@@ -1,7 +1,7 @@
-# Use delegates with fixed arguments and custom meta data
+# Use delegates with fixed message properties and custom meta data
 
 How to send calls through a Seneca delegate, so that the actions see
-fixed message properties (`fixedargs`) and custom meta data
+fixed message properties (`fixedmsg`) and custom meta data
 (`fixedmeta.custom`), for example the user or tenant a message belongs
 to.
 
@@ -16,7 +16,7 @@ seneca.add('role:note,cmd:add', function (msg, reply, meta) {
 ## 1. Define named delegates
 
 Each entry of `delegates` is the argument list of
-`seneca.delegate(fixedargs, fixedmeta)`. The delegates are created once
+`seneca.delegate(fixedmsg, fixedmeta)`. The delegates are created once
 the instance is ready, before the first call.
 
 ```js

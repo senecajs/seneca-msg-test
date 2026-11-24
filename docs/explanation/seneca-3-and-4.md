@@ -1,35 +1,16 @@
 # Seneca 3 and Seneca 4
 
-The harness supports Seneca 3 and the Seneca 4 prerelease
-(4.0.0-rc5 and later). This page lists what differs between the two,
-what the harness does about it, and what a spec author has to do.
+seneca-msg-test 5 runs on Seneca 4 only. Seneca 3 users stay on
+seneca-msg-test 4 (`npm install --save-dev seneca-msg-test@4`). This
+page lists what differs between the two, what the harness does about
+it, and what a spec written for Seneca 3 needs on Seneca 4.
 
-| Topic | Seneca 3 (3.38 tested) | Seneca 4 (4.0.0-rc5 and 4.0.0 tested) |
-| ----- | ---------------------- | ------------------------------------- |
-| Promise API (`post`, `message`, promise `ready`) | Provided by seneca-promisify, which the harness loads when `post` is missing. | Built in; seneca-promisify is a no-op and not needed. |
-| `await seneca.ready()` | Resolves. | Never resolves on 4.0.0-rc5 when the instance is already idle (fixed in 4.0.0). The harness uses the callback form. |
+| Topic | Seneca 3, seneca-msg-test 4 | Seneca 4, seneca-msg-test 5 |
+| ----- | --------------------------- | --------------------------- |
+| Promise API (`post`, `message`, promise `ready`) | Provided by seneca-promisify, which the harness loaded when `post` was missing. | Built in. The harness loads nothing, and the project needs no seneca-promisify. |
 | Error replies in `act` callbacks | Wrapped: `message` and `msg` are `seneca: Action <pattern> failed: <message>.`, `code` is `act_execute`, the original error is `orig`, `details.message` is the original message. | The action's own error, as replied, with its own `message`, `code` and other properties. The wrapped description is `meta.err` of the reply. |
-| Node.js | 18 or later for the harness (tested on 22 and 24). | 22 or later (a Seneca 4 requirement). |
-
-## The `ready()` workaround
-
-A test file usually creates its Seneca instances at load time, one per
-test, and the harness awaits readiness when the test runs. By then the
-instance has loaded its plugins and is idle. On seneca@4.0.0-rc5,
-`await seneca.ready()` waits for a later "queue cleared" event that an
-idle instance never emits, so every test after the first hung until the
-runner's timeout. The callback form, `seneca.ready(fn)`, checks the
-executor directly and calls `fn` promptly on an idle instance, on every
-Seneca version. The harness therefore waits with
-
-```js
-await new Promise((resolve) => seneca.ready(() => resolve()))
-```
-
-in both places where it waits (after creation, and after loading
-seneca-promisify). Seneca 4.0.0 fixes the promise form; the callback
-form remains correct there. Test code that awaits `ready()` on its own
-instances should do the same while it may run on rc5.
+| Entity plugin | `seneca-entity`, loaded with `.use('entity')`. | `@seneca/entity` 29 or later, loaded with `.use('@seneca/entity')`. |
+| Node.js | 18 or later. | 24 or later. |
 
 ## Errors
 
@@ -41,29 +22,43 @@ data instead.
 For the harness this changes what `err` is matched against. The match
 uses a plain object view of the error, because the clone taken for
 matching would lose the non-enumerable `message` of an `Error`. The view
-has `message`, `name` and the enumerable properties; on Seneca 3 it also
-presents `orig` in the same form, so `orig.message` can be matched. A
-spec that must run on both versions either chooses the expectation by
-version or uses a Joi rule that both message forms satisfy; see
-[Assert on errors on Seneca 3 and 4](../how-to/assert-on-errors.md).
+has `message`, `name` and the enumerable properties, and presents
+`orig` in the same form when the error carries the error it was built
+from there. An expectation written for the Seneca 3 wrapper, such as
+`{ code: 'act_execute', orig: { message: 'foo' } }`, no longer matches:
+match the action's own error instead, `{ message: 'foo' }`. A Joi rule
+on `message` that both message forms satisfy keeps working. See
+[Assert on errors](../how-to/assert-on-errors.md).
 
-## Promises and seneca-promisify
+## Promises
 
-The harness needs `seneca.post` for its data import. It checks for the
-method rather than for the plugin: on Seneca 4 nothing is loaded, on
-Seneca 3 seneca-promisify is loaded and the harness waits for ready
-once more. seneca-promisify therefore remains a peer dependency for
-Seneca 3 users only.
+The harness needs `seneca.post` for its data import and
+`seneca.ready()` to wait for the instance. Both are part of Seneca 4.
+`await seneca.ready()` resolves at once on an instance that is already
+idle, which is the usual case for instances created at file load time.
+Seneca 4 still accepts the seneca-promisify plugin but warns that it is
+deprecated (`SENECA_DEP_PROMISIFY`); remove `.use('promisify')` and the
+dependency.
 
-## Peer dependency range
+## The entity plugin
 
-The peer range for seneca is `>=3 || >=4.0.0-rc5`. A bare `>=3`
-excludes prereleases under npm's semver rules, which made
-`npm install` fail with `ERESOLVE` in projects that use the Seneca 4
-prerelease. The range resolves to 4.0.0 once it is published.
+The entity plugin is published as `@seneca/entity` from version 29, the
+first version that loads on Seneca 4. Version 28 and earlier were
+published as `seneca-entity` and stop Seneca 4 at startup with
+`plugin_gubu_shape`. Seneca resolves the short name in
+`.use('entity')` to `seneca-entity` first when that package is
+installed, so load the plugin by its full name,
+`.use('@seneca/entity')`, and remove `seneca-entity` from the project.
 
-## Running the test suite on either version
+## Peer dependencies
 
-The repository's own tests choose their error expectations by version
-and pass on seneca 3.38, 4.0.0-rc5 and 4.0.0. See the Contributing
-section of the [README](../../README.md#contributing).
+The peer dependencies are `seneca` `^4.0.0` and `@seneca/entity`
+`^29.0.0`. The entity plugin is optional: the harness seeds `data`
+with the message `role:mem-store,cmd:import`, which carries
+`default$: {}`, so without the plugin the import does nothing and the
+run continues.
+
+## Running the test suite
+
+The repository's own tests run on Seneca 4 with `@seneca/entity` 29.
+See the Contributing section of the [README](../../README.md#contributing).

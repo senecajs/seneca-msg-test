@@ -5,8 +5,9 @@ as `cmd:get` and `cmd:list` have data to work with.
 
 ## What you need
 
-The instance must use the entity plugin (`seneca-entity`), whose default
-store is the in-memory `mem-store`. The harness sends the `data`
+The instance must use the entity plugin, `@seneca/entity`, loaded with
+`.use('@seneca/entity')`. Its default store is the in-memory
+`mem-store`. The harness sends the `data`
 property of the spec to that store with the message
 `role:mem-store,cmd:import` before the first call. The message carries
 `default$: {}`, so without the entity plugin the import does nothing and

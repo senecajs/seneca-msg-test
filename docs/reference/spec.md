@@ -16,7 +16,7 @@ and errors are matched, and how the specification is validated.
 | `context` | object | `{}` | The initial reference context. Call records are added to this object under the call `name`; its entries can be referenced from `params` and `out`; it is passed to `params`, `delegate` and `verify` functions. |
 | `pattern` | string | `''` | Jsonic pattern merged into every call message (see Message assembly), and the scope of the missing messages check (`seneca.list(pattern)`). |
 | `fix` | string | `''` | Deprecated name for `pattern`; used only when `pattern` is empty. |
-| `delegates` | object | `{}` | Named delegates. Each value is the argument array of `seneca.delegate(fixedargs, fixedmeta)`; items are objects or `null`. The delegates are created once the instance is ready, before the first call, and selected per call with `delegate: name`. |
+| `delegates` | object | `{}` | Named delegates. Each value is the argument array of `seneca.delegate(fixedmsg, fixedmeta)`; items are objects or `null`. The delegates are created once the instance is ready, before the first call, and selected per call with `delegate: name`. |
 | `allow.missing` | boolean | `false` | `true` skips the missing messages check: patterns of the instance under `pattern` that no call resolves to no longer fail the run. |
 | `calls` | array, or `(LN) => array` | none | The calls to run, in order. A function is called at the start of each run with `LN` (see [API](api.md#other-exports)) and must return the array; its result is not validated. Required: a run without `calls` throws. |
 
@@ -80,8 +80,8 @@ into a Joi schema:
 `out` is matched against the reply itself. `err` is matched against a
 plain object view of the error: all enumerable properties (for example
 `code` and `details`), plus `message` and `name`, and, when `err.orig`
-is an `Error` (Seneca 3), `orig` in the same form. See
-[Assert on errors on Seneca 3 and 4](../how-to/assert-on-errors.md).
+is an `Error` (an error built from another error), `orig` in the same
+form. See [Assert on errors](../how-to/assert-on-errors.md).
 
 ## Validation
 

@@ -22,7 +22,7 @@ const lab = (exports.lab = Lab.script())
 const Seneca = require('seneca')
 const SenecaMsgTest = require('seneca-msg-test')
 
-const seneca = Seneca({ log: 'silent' }).use('entity').use('./shop.js')
+const seneca = Seneca({ log: 'silent' }).use('@seneca/entity').use('./shop.js')
 
 lab.test('shop messages', SenecaMsgTest(seneca, require('./shop.spec.js')))
 
@@ -42,7 +42,7 @@ ignores.
 const Seneca = require('seneca')
 const SenecaMsgTest = require('seneca-msg-test')
 
-const seneca = Seneca({ log: 'silent' }).use('entity').use('./shop.js')
+const seneca = Seneca({ log: 'silent' }).use('@seneca/entity').use('./shop.js')
 
 test('shop messages', SenecaMsgTest(seneca, require('./shop.spec.js')))
 
@@ -63,7 +63,7 @@ test; a long spec may need `jest.setTimeout` or the `timeout` argument.
 const Seneca = require('seneca')
 const SenecaMsgTest = require('seneca-msg-test')
 
-const seneca = Seneca({ log: 'silent' }).use('entity').use('./shop.js')
+const seneca = Seneca({ log: 'silent' }).use('@seneca/entity').use('./shop.js')
 
 it('shop messages', SenecaMsgTest(seneca, require('./shop.spec.js')))
 
@@ -78,8 +78,8 @@ npx mocha shop.mocha.js
 
 The harness does not close the instance, so that several specs can run
 against it. Close it in the runner's teardown hook, as above, so that
-the test process exits. The callback form of `close` works on Seneca 3
-and 4; on Seneca 4 `await seneca.close()` works too.
+the test process exits. Both the callback form of `close` and
+`await seneca.close()` work.
 
 ## Several specs on one instance
 

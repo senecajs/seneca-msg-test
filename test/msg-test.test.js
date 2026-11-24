@@ -10,10 +10,6 @@ const Seneca = require('seneca')
 // Use the Joi instance of the harness so that versions match.
 const Joi = SenecaMsgTest.Joi
 
-// Seneca 3 wraps action errors ("seneca: Action ... failed: ...");
-// Seneca 4 passes the action's own error through unchanged.
-const SENECA3 = require('seneca/package.json').version.startsWith('3.')
-
 test(
   'happy',
   run_spec(
@@ -213,32 +209,18 @@ test(
         {
           pattern: 'cmd:err',
           params: { text: 'foo' },
-          err: SENECA3
-            ? // Seneca 3: the wrapped error, with the original in `orig`
-              {
-                message: 'seneca: Action cmd:err,role:foo failed: foo.',
-                msg: 'seneca: Action cmd:err,role:foo failed: foo.',
-                code: 'act_execute',
-                orig: { message: 'foo' },
-                details: { message: 'foo' },
-              }
-            : // Seneca 4: the error the action replied with
-              { message: 'foo', name: 'Error' },
+          // Seneca 4 passes the error the action replied with
+          err: { message: 'foo', name: 'Error' },
         },
         {
           pattern: 'cmd:fail',
           params: { text: 'bar' },
-          err: SENECA3
-            ? {
-                code: 'act_execute',
-                orig: { message: 'bar', code: 'foo_failed' },
-              }
-            : { message: 'bar', code: 'foo_failed', details: { text: 'bar' } },
+          err: { message: 'bar', code: 'foo_failed', details: { text: 'bar' } },
         },
         {
           pattern: 'cmd:err',
           params: { text: 'zed' },
-          // Joi rules work on both Seneca versions
+          // Joi rules work inside err
           err: { message: Joi.string().pattern(/zed/) },
         },
       ],
@@ -286,9 +268,8 @@ test('error-mismatch', async (t) => {
       ],
     })(),
     {
-      // Seneca 3 wraps the message; Seneca 4 passes it through
       message:
-        /^Error not expected for: \{role:plugin0,cmd:err\}, err: Error: .*foo/,
+        /^Error not expected for: \{role:plugin0,cmd:err\}, err: Error: foo$/,
     }
   )
 })
@@ -390,7 +371,6 @@ test(
   run_spec(
     seneca_instance({ log: 'silent' }, function (seneca) {
       return seneca
-        .use('promisify')
         .message('a:1', async function (msg) {
           return { b: msg.b + 1 }
         })
@@ -472,11 +452,20 @@ test('exports', () => {
     name: 'Error',
     code: 'c0',
   })
+
+  // An error built from another error keeps it in orig, viewed the same way
+  const outer = new Error('outer')
+  outer.orig = err
+  assert.deepEqual(SenecaMsgTest.intern.error_view(outer), {
+    message: 'outer',
+    name: 'Error',
+    orig: { message: 'foo', name: 'Error', code: 'c0' },
+  })
 })
 
 function seneca_instance(options, setup) {
   setup = setup || ((x) => x)
-  return setup(Seneca(options).use('entity'))
+  return setup(Seneca(options).use('@seneca/entity'))
 }
 
 // Run the message test, then close the instance so that the process exits.
