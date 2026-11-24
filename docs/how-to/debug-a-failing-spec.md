@@ -96,8 +96,8 @@ recognizes `.js` files.
 * `allow: { missing: true }` lets you run a spec with only the calls you
   are looking at (see [Allow unlisted messages](allow-unlisted-messages.md)).
 * With the Node.js test runner, `node --test --test-name-pattern <name>`
-  runs one test; this repository's `npm run test-some -- <name>` does the
-  same.
+  runs one test; in this repository, `TEST_PATTERN=<name> npm run
+  test-some` does the same.
 
 ## 7. Check the instance setup
 

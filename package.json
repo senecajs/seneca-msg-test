@@ -9,7 +9,7 @@
     "watch": "tsc -w -d",
     "build": "tsc -d",
     "test": "node --test --experimental-test-coverage --test-coverage-include=\"dist/**\" --test-coverage-exclude=\"test/**\" --test-coverage-lines=80 test/msg-test.test.js",
-    "test-some": "node --test test/msg-test.test.js --test-name-pattern",
+    "test-some": "node --test --test-name-pattern=\"$TEST_PATTERN\" test/msg-test.test.js",
     "prettier": "prettier --write --no-semi --single-quote test/*.js docs/examples/*.js",
     "clean": "rm -rf node_modules yarn.lock package-lock.json dist",
     "reset": "npm run clean && npm i && npm test",
